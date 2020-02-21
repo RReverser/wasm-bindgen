@@ -45,7 +45,6 @@ impl Scene {
     pub fn render(
         self,
         concurrency: usize,
-        pool: &pool::WorkerPool,
     ) -> Result<RenderingScene, JsValue> {
         let scene = self.inner;
         let height = scene.height;
@@ -56,6 +55,9 @@ impl Scene {
         let mut rgb_data = vec![0; 4 * pixels];
         let base = rgb_data.as_ptr() as usize;
         let len = rgb_data.len();
+
+        // Create a temporary worker pool.
+        let pool = pool::WorkerPool::new(concurrency)?;
 
         // Configure a rayon thread pool which will pull web workers from
         // `pool`.
