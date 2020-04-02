@@ -20,6 +20,9 @@ self.onmessage = event => {
   self.onmessage = async event => {
     // This will queue further commands up until the module is fully initialised:
     await initialised;
-    wasm_bindgen.child_entry_point(event.data);
+    setTimeout(() => {
+      wasm_bindgen.child_entry_point(event.data);
+      close();
+    }, 100);
   };
 };
