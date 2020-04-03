@@ -25,7 +25,7 @@ RUSTFLAGS='-C target-feature=+atomics,+bulk-memory' \
 # Webpack doesn't have support for atomics yet.
 cargo run --manifest-path ../../crates/cli/Cargo.toml \
   --bin wasm-bindgen -- \
-  ../../target/wasm32-unknown-unknown/release/raytrace_parallel.wasm --out-dir . \
+  ../../target/wasm32-unknown-unknown/release/raytrace_parallel.wasm --out-dir pkg \
   --no-modules
 
 python3 -m http.server
