@@ -7,22 +7,14 @@ importScripts('pkg/raytrace_parallel.js');
 //
 // After our first message all subsequent messages are an entry point to run,
 // so we just do that.
-self.onmessage = event => {
-  let initialised = wasm_bindgen(...event.data).catch(err => {
-    // Propagate to main `onerror`:
-    setTimeout(() => {
-      throw err;
-    });
-    // Rethrow to keep promise rejected and prevent execution of further commands:
-    throw err;
-  });
+self.onmessage = initEvent => {
+  let initialised;
 
   self.onmessage = async event => {
+    initialised = initialised || (wasm_bindgen(...initEvent.data));
     // This will queue further commands up until the module is fully initialised:
     await initialised;
-    setTimeout(() => {
-      wasm_bindgen.child_entry_point(event.data);
-      close();
-    }, 100);
+    wasm_bindgen.child_entry_point(event.data);
+    close();
   };
 };
