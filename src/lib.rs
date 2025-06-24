@@ -75,14 +75,14 @@ use crate::convert::{FromWasmAbi, TryFromJsValue, WasmRet, WasmSlice};
 
 macro_rules! externs {
     ($(#[$attr:meta])* extern "C" { $(fn $name:ident($($args:tt)*) -> $ret:ty;)* }) => (
-        #[cfg(all(target_arch = "wasm32", any(target_os = "unknown", target_os = "none")))]
+        #[cfg(target_arch = "wasm32")]
         $(#[$attr])*
         extern "C" {
             $(fn $name($($args)*) -> $ret;)*
         }
 
         $(
-            #[cfg(not(all(target_arch = "wasm32", any(target_os = "unknown", target_os = "none"))))]
+            #[cfg(not(target_arch = "wasm32"))]
             #[allow(unused_variables)]
             unsafe extern fn $name($($args)*) -> $ret {
                 panic!("function not implemented on non-wasm32 targets")
@@ -1405,13 +1405,7 @@ pub fn anyref_heap_live_count() -> u32 {
 pub trait UnwrapThrowExt<T>: Sized {
     /// Unwrap this `Option` or `Result`, but instead of panicking on failure,
     /// throw an exception to JavaScript.
-    #[cfg_attr(
-        any(
-            debug_assertions,
-            not(all(target_arch = "wasm32", any(target_os = "unknown", target_os = "none")))
-        ),
-        track_caller
-    )]
+    #[cfg_attr(any(debug_assertions, not(target_arch = "wasm32")), track_caller)]
     fn unwrap_throw(self) -> T {
         if cfg!(all(
             debug_assertions,
@@ -1437,13 +1431,7 @@ pub trait UnwrapThrowExt<T>: Sized {
     /// Unwrap this container's `T` value, or throw an error to JS with the
     /// given message if the `T` value is unavailable (e.g. an `Option<T>` is
     /// `None`).
-    #[cfg_attr(
-        any(
-            debug_assertions,
-            not(all(target_arch = "wasm32", any(target_os = "unknown", target_os = "none")))
-        ),
-        track_caller
-    )]
+    #[cfg_attr(any(debug_assertions, not(target_arch = "wasm32")), track_caller)]
     fn expect_throw(self, message: &str) -> T;
 }
 

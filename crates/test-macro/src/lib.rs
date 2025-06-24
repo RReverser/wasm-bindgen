@@ -98,7 +98,7 @@ pub fn wasm_bindgen_test(
             const _: () = {
                 #wasm_bindgen_path::__rt::wasm_bindgen::__wbindgen_coverage! {
                 #[export_name = ::core::concat!("__wbgt_", #ignore_name, "_", ::core::module_path!(), "::", ::core::stringify!(#ident))]
-                #[cfg(all(target_arch = "wasm32", any(target_os = "unknown", target_os = "none")))]
+                #[cfg(target_arch = "wasm32")]
                 extern "C" fn __wbgt_test(cx: &#wasm_bindgen_path::__rt::Context) {
                     let test_name = ::core::concat!(::core::module_path!(), "::", ::core::stringify!(#ident));
                     #test_body
@@ -109,9 +109,7 @@ pub fn wasm_bindgen_test(
     );
 
     if let Some(path) = attributes.unsupported {
-        tokens.extend(
-            quote! { #[cfg_attr(not(all(target_arch = "wasm32", any(target_os = "unknown", target_os = "none"))), #path)] },
-        );
+        tokens.extend(quote! { #[cfg_attr(not(target_arch = "wasm32"), #path)] });
 
         if let Some(should_panic) = should_panic {
             let should_panic = if let Some(lit) = should_panic {
@@ -120,9 +118,7 @@ pub fn wasm_bindgen_test(
                 quote! { should_panic }
             };
 
-            tokens.extend(
-                quote! { #[cfg_attr(not(all(target_arch = "wasm32", any(target_os = "unknown", target_os = "none"))), #should_panic)] }
-            )
+            tokens.extend(quote! { #[cfg_attr(not(target_arch = "wasm32"), #should_panic)] })
         }
 
         if let Some(ignore) = ignore {
@@ -132,9 +128,7 @@ pub fn wasm_bindgen_test(
                 quote! { ignore }
             };
 
-            tokens.extend(
-                quote! { #[cfg_attr(not(all(target_arch = "wasm32", any(target_os = "unknown", target_os = "none"))), #ignore)] }
-            )
+            tokens.extend(quote! { #[cfg_attr(not(target_arch = "wasm32"), #ignore)] })
         }
     }
 
