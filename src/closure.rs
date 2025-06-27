@@ -16,6 +16,7 @@ use crate::describe::*;
 use crate::throw_str;
 use crate::JsValue;
 use crate::UnwrapThrowExt;
+use wasm_bindgen_shared::tys::{CLOSURE, EXTERNREF};
 
 /// A handle to both a closure in Rust as well as JS closure which will invoke
 /// the Rust closure.

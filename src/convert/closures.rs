@@ -5,8 +5,9 @@ use core::mem;
 use crate::convert::slices::WasmSlice;
 use crate::convert::RefFromWasmAbi;
 use crate::convert::{FromWasmAbi, IntoWasmAbi, ReturnWasmAbi, WasmAbi, WasmRet};
-use crate::describe::{inform, WasmDescribe, FUNCTION};
+use crate::describe::{inform, WasmDescribe};
 use crate::throw_str;
+use wasm_bindgen_shared::tys::FUNCTION;
 
 macro_rules! stack_closures {
     ($( ($cnt:tt $invoke:ident $invoke_mut:ident $($var:ident $arg1:ident $arg2:ident $arg3:ident $arg4:ident)*) )*) => ($(

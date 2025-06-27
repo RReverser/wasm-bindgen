@@ -16,6 +16,7 @@ use crate::describe::*;
 use crate::JsValue;
 
 use cfg_if::cfg_if;
+use wasm_bindgen_shared::tys::{NAMED_EXTERNREF, VECTOR};
 
 /// # ⚠️ Unstable
 ///
