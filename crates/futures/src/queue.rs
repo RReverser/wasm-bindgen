@@ -1,7 +1,7 @@
 use alloc::collections::VecDeque;
 use alloc::rc::Rc;
 use core::cell::{Cell, RefCell};
-use js_sys::Promise;
+use js_sys::{Function, Promise};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -9,10 +9,8 @@ extern "C" {
     #[wasm_bindgen]
     fn queueMicrotask(closure: &Closure<dyn FnMut(JsValue)>);
 
-    type Global;
-
-    #[wasm_bindgen(method, getter, js_name = queueMicrotask)]
-    fn hasQueueMicrotask(this: &Global) -> JsValue;
+    #[wasm_bindgen(thread_local_v2, js_name = queueMicrotask)]
+    static HAS_QUEUE_MICROTASK: Option<Function>;
 }
 
 struct QueueState {
@@ -51,9 +49,8 @@ impl QueueState {
 
 pub(crate) struct Queue {
     state: Rc<QueueState>,
-    promise: Promise,
+    promise_fallback_for_queue_microtask: Option<Promise>,
     closure: Closure<dyn FnMut(JsValue)>,
-    has_queue_microtask: bool,
 }
 
 impl Queue {
@@ -63,10 +60,10 @@ impl Queue {
         // Use queueMicrotask to execute as soon as possible. If it does not exist
         // fall back to the promise resolution
         if !self.state.is_scheduled.replace(true) {
-            if self.has_queue_microtask {
-                queueMicrotask(&self.closure);
+            if let Some(promise) = self.promise_fallback_for_queue_microtask.as_ref() {
+                let _ = promise.then(&self.closure);
             } else {
-                let _ = self.promise.then(&self.closure);
+                queueMicrotask(&self.closure);
             }
         }
     }
@@ -86,24 +83,20 @@ impl Queue {
             tasks: RefCell::new(VecDeque::new()),
         });
 
-        let has_queue_microtask = js_sys::global()
-            .unchecked_into::<Global>()
-            .hasQueueMicrotask()
-            .is_function();
-
         Self {
-            promise: Promise::resolve(&JsValue::undefined()),
+            promise_fallback_for_queue_microtask: HAS_QUEUE_MICROTASK.with(|opt| {
+                opt.is_none()
+                    .then(|| Promise::resolve(&JsValue::undefined()))
+            }),
 
             closure: {
                 let state = Rc::clone(&state);
-
                 // This closure will only be called on the next microtask event
                 // tick
                 Closure::new(move |_| state.run_all())
             },
 
             state,
-            has_queue_microtask,
         }
     }
 
