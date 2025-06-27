@@ -11,7 +11,7 @@ use core::{mem::MaybeUninit, ptr::NonNull};
 use crate::{Clamped, JsError, JsObject, JsValue};
 use cfg_if::cfg_if;
 
-use wasm_bindgen_shared::tys::*;
+pub use wasm_bindgen_shared::tys::*;
 
 #[inline(always)] // see the wasm-interpreter crate
 #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
