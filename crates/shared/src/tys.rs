@@ -7,7 +7,6 @@ macro_rules! tys {
     }
 }
 
-// NB: this list must be kept in sync with `crates/cli-support/src/descriptor.rs`
 tys! {
     I8
     U8
@@ -42,4 +41,5 @@ tys! {
     UNIT
     CLAMPED
     NONNULL
+    JSPI
 }
