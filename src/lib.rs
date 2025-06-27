@@ -84,7 +84,7 @@ macro_rules! externs {
         $(
             #[cfg(not(target_arch = "wasm32"))]
             #[allow(unused_variables)]
-            unsafe extern fn $name($($args)*) -> $ret {
+            unsafe extern "C" fn $name($($args)*) -> $ret {
                 panic!("function not implemented on non-wasm32 targets")
             }
         )*

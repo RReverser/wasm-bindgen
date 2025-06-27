@@ -600,7 +600,7 @@ macro_rules! doit {
 
                 inform(invoke::<$($var,)* R> as usize as u32);
 
-                unsafe extern fn destroy<$($var: FromWasmAbi,)* R: ReturnWasmAbi>(
+                unsafe extern "C" fn destroy<$($var: FromWasmAbi,)* R: ReturnWasmAbi>(
                     a: usize,
                     b: usize,
                 ) {
@@ -661,7 +661,7 @@ macro_rules! doit {
 
                 inform(invoke::<$($var,)* R> as usize as u32);
 
-                unsafe extern fn destroy<$($var: FromWasmAbi,)* R: ReturnWasmAbi>(
+                unsafe extern "C" fn destroy<$($var: FromWasmAbi,)* R: ReturnWasmAbi>(
                     a: usize,
                     b: usize,
                 ) {
