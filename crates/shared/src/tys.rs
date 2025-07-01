@@ -1,10 +1,37 @@
 macro_rules! tys {
-    ($($a:ident)*) => (tys! { @ ($($a)*) 0 });
-    (@ () $v:expr) => {};
-    (@ ($a:ident $($b:ident)*) $v:expr) => {
-        pub const $a: u32 = $v;
-        tys!(@ ($($b)*) $v+1);
-    }
+    (@last $first:ident $($rest:ident)+) => {
+        tys!(@last $($rest)+)
+    };
+    (@last $last:ident) => {
+        $last
+    };
+
+    ($($name:ident)*) => {
+        #[allow(non_camel_case_types)]
+        #[repr(u32)]
+        #[derive(PartialEq, Eq, Debug, Clone, Copy, Hash)]
+        pub enum Tys {
+            $(
+                $name,
+            )*
+        }
+
+        $(
+            pub const $name: u32 = Tys::$name as u32;
+        )*
+
+        impl TryFrom<u32> for Tys {
+            type Error = u32;
+
+            fn try_from(value: u32) -> Result<Self, Self::Error> {
+                if value <= tys!(@last $($name)*) {
+                    Ok(unsafe { std::mem::transmute::<u32, Self>(value) })
+                } else {
+                    Err(value)
+                }
+            }
+        }
+    };
 }
 
 tys! {
@@ -41,5 +68,4 @@ tys! {
     UNIT
     CLAMPED
     NONNULL
-    JSPI
 }

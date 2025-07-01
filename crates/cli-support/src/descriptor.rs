@@ -88,7 +88,9 @@ impl Descriptor {
     }
 
     fn _decode(data: &mut &[u32], clamped: bool) -> Descriptor {
-        match get(data) {
+        use Tys::*;
+
+        match get_descriptor_code(data) {
             I8 => Descriptor::I8,
             I16 => Descriptor::I16,
             I32 => Descriptor::I32,
@@ -151,7 +153,6 @@ impl Descriptor {
             UNIT => Descriptor::Unit,
             CLAMPED => Descriptor::_decode(data, true),
             NONNULL => Descriptor::NonNull,
-            other => panic!("unknown descriptor: {}", other),
         }
     }
 
@@ -216,17 +217,27 @@ fn get_string(data: &mut &[u32]) -> String {
         .collect()
 }
 
+fn get_descriptor_code(data: &mut &[u32]) -> Tys {
+    get(data).try_into().expect("unknown descriptor code")
+}
+
 impl Closure {
     fn decode(data: &mut &[u32]) -> Closure {
         let shim_idx = get(data);
         let dtor_idx = get(data);
-        let mutable = get(data) == REFMUT;
-        assert_eq!(get(data), FUNCTION);
+        let (mutable, desc) = match Descriptor::_decode(data, false) {
+            Descriptor::Ref(desc) => (false, desc),
+            Descriptor::RefMut(desc) => (true, desc),
+            other => panic!("expected a Ref or RefMut descriptor for closure, got {other:?}"),
+        };
+        let Descriptor::Function(function) = *desc else {
+            panic!("expected a Function descriptor for closure, got {desc:?}");
+        };
         Closure {
             shim_idx,
             dtor_idx,
             mutable,
-            function: Function::decode(data),
+            function: *function,
         }
     }
 }
