@@ -317,11 +317,7 @@ impl Context {
                 panic_handling(panic_info.to_string());
             }));
         });
-        #[cfg(all(
-            not(feature = "std"),
-            target_arch = "wasm32",
-            any(target_os = "unknown", target_os = "none")
-        ))]
+        #[cfg(all(not(feature = "std"), target_arch = "wasm32"))]
         #[panic_handler]
         fn panic_handler(panic_info: &core::panic::PanicInfo<'_>) -> ! {
             panic_handling(panic_info.to_string());
