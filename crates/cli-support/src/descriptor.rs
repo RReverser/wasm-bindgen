@@ -60,6 +60,7 @@ pub struct Closure {
     pub dtor_idx: u32,
     pub function: Function,
     pub mutable: bool,
+    pub jspi: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -233,11 +234,17 @@ impl Closure {
         let Descriptor::Function(function) = *desc else {
             panic!("expected a Function descriptor for closure, got {desc:?}");
         };
+        let jspi = match get(data) {
+            0 => false,
+            1 => true,
+            other => panic!("{other} is not a boolean (0 or 1)"),
+        };
         Closure {
             shim_idx,
             dtor_idx,
             mutable,
             function: *function,
+            jspi,
         }
     }
 }

@@ -279,7 +279,14 @@ where
 
     /// A more direct version of `Closure::new` which creates a `Closure` from
     /// a `Box<dyn Fn>`/`Box<dyn FnMut>`, which is how it's kept internally.
-    pub fn wrap(mut data: Box<T>) -> Closure<T> {
+    pub fn wrap(data: Box<T>) -> Closure<T> {
+        Self::wrap_maybe_jspi::<false>(data)
+    }
+
+    /// Implementation detail used by both regular Closure::wrap and specially-handled
+    /// closures used by wasm-bindgen-futures to drive tasks.
+    #[doc(hidden)]
+    pub fn wrap_maybe_jspi<const JSPI: bool>(mut data: Box<T>) -> Closure<T> {
         assert_eq!(mem::size_of::<*const T>(), mem::size_of::<FatPtr<T>>());
         let (a, b) = unsafe {
             FatPtr {
@@ -333,18 +340,26 @@ where
         // about what's going on here.
 
         #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
-        extern "C" fn describe<T: WasmClosure + ?Sized>() {
+        extern "C" fn describe<const JSPI: bool, T: WasmClosure + ?Sized>() {
             inform(CLOSURE);
-            T::describe()
+            T::describe();
+            inform(JSPI.into());
         }
 
         #[inline(never)]
         #[cfg_attr(wasm_bindgen_unstable_test_coverage, coverage(off))]
-        unsafe fn breaks_if_inlined<T: WasmClosure + ?Sized>(a: usize, b: usize) -> u32 {
-            super::__wbindgen_describe_closure(a as u32, b as u32, describe::<T> as usize as u32)
+        unsafe fn breaks_if_inlined<const JSPI: bool, T: WasmClosure + ?Sized>(
+            a: usize,
+            b: usize,
+        ) -> u32 {
+            super::__wbindgen_describe_closure(
+                a as u32,
+                b as u32,
+                describe::<JSPI, T> as usize as u32,
+            )
         }
 
-        let idx = unsafe { breaks_if_inlined::<T>(a, b) };
+        let idx = unsafe { breaks_if_inlined::<JSPI, T>(a, b) };
 
         Closure {
             js: ManuallyDrop::new(JsValue::_new(idx)),

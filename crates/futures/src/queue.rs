@@ -93,7 +93,7 @@ impl Queue {
                 let state = Rc::clone(&state);
                 // This closure will only be called on the next microtask event
                 // tick
-                Closure::new(move |_| state.run_all())
+                Closure::wrap_maybe_jspi::<true>(Box::new(move |_| state.run_all()))
             },
 
             state,

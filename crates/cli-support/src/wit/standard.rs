@@ -112,7 +112,10 @@ pub enum Instruction {
     /// Call an exported function in the core module
     CallExport(walrus::ExportId),
     /// Call an element in the function table of the core module
-    CallTableElement(u32),
+    CallTableElement {
+        idx: u32,
+        jspi: bool,
+    },
 
     /// Gets an argument by its index.
     ArgGet(u32),

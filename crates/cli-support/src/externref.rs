@@ -139,9 +139,10 @@ fn find_call_export(instrs: &[InstructionData]) -> Option<Export> {
         .enumerate()
         .find_map(|(i, instr)| match instr.instr {
             Instruction::CallExport(e) => Some(Export::Export(e)),
-            Instruction::CallTableElement(e) => Some(Export::TableElement {
+            Instruction::CallTableElement { idx: e, jspi } => Some(Export::TableElement {
                 idx: e,
                 call_idx: i,
+                jspi,
             }),
             _ => None,
         })
@@ -154,6 +155,7 @@ enum Export {
         idx: u32,
         /// Index in the instruction stream where the call instruction is found
         call_idx: usize,
+        jspi: bool,
     },
 }
 
@@ -267,7 +269,7 @@ fn export_xform(cx: &mut Context, export: Export, instrs: &mut Vec<InstructionDa
     // also maintain indices of the instructions to delete.
     for (i, instr) in iter.by_ref() {
         match instr.instr {
-            Instruction::CallExport(_) | Instruction::CallTableElement(_) => break,
+            Instruction::CallExport(_) | Instruction::CallTableElement { .. } => break,
             Instruction::I32FromExternrefOwned => {
                 args.pop();
                 args.push(Some(true));
@@ -325,9 +327,13 @@ fn export_xform(cx: &mut Context, export: Export, instrs: &mut Vec<InstructionDa
         Export::Export(id) => {
             cx.export_xform(id, &args, ret_externref);
         }
-        Export::TableElement { idx, call_idx } => {
+        Export::TableElement {
+            idx,
+            call_idx,
+            jspi,
+        } => {
             if let Some(new_idx) = cx.table_element_xform(idx, &args, ret_externref) {
-                instrs[call_idx].instr = Instruction::CallTableElement(new_idx);
+                instrs[call_idx].instr = Instruction::CallTableElement { idx: new_idx, jspi };
             }
         }
     }
