@@ -773,7 +773,7 @@ fn instruction(
         Instruction::CallCore(_)
         | Instruction::CallExport(_)
         | Instruction::CallAdapter(_)
-        | Instruction::CallTableElement { .. }
+        | Instruction::CallTableElement(_)
         | Instruction::DeferFree { .. } => {
             let invoc = Invocation::from(instr, js.cx.module)?;
             let (mut params, results) = invoc.params_results(js.cx);
@@ -1577,11 +1577,7 @@ fn instruction(
 }
 
 enum Invocation {
-    Core {
-        id: walrus::FunctionId,
-        jspi: bool,
-        defer: bool,
-    },
+    Core { id: walrus::FunctionId, defer: bool },
     Adapter(AdapterId),
 }
 
@@ -1592,36 +1588,26 @@ impl Invocation {
             CallCore(f) => Invocation::Core {
                 id: *f,
                 defer: false,
-                jspi: false,
             },
 
             DeferFree { free, .. } => Invocation::Core {
                 id: *free,
                 defer: true,
-                jspi: false,
             },
 
             CallExport(e) => match module.exports.get(*e).item {
-                walrus::ExportItem::Function(id) => Invocation::Core {
-                    id,
-                    defer: false,
-                    jspi: false,
-                },
+                walrus::ExportItem::Function(id) => Invocation::Core { id, defer: false },
                 _ => panic!("can only call exported function"),
             },
 
             // The function table never changes right now, so we can statically
             // look up the desired function.
-            CallTableElement { idx, jspi } => {
+            CallTableElement(idx) => {
                 let entry = wasm_bindgen_wasm_conventions::get_function_table_entry(module, *idx)?;
                 let id = entry
                     .func
                     .ok_or_else(|| anyhow!("function table wasn't filled in a {}", idx))?;
-                Invocation::Core {
-                    id,
-                    defer: false,
-                    jspi: *jspi,
-                }
+                Invocation::Core { id, defer: false }
             }
 
             CallAdapter(id) => Invocation::Adapter(*id),
@@ -1653,12 +1639,9 @@ impl Invocation {
         log_error: &mut bool,
     ) -> Result<String, Error> {
         match self {
-            Invocation::Core { id, jspi, .. } => {
-                let mut func = format!("wasm.{}", cx.export_name_of(*id));
-                if *jspi {
-                    func = format!("WebAssembly.promising({func})");
-                }
-                Ok(format!("{func}({})", args.join(", ")))
+            Invocation::Core { id, .. } => {
+                let name = cx.export_name_of(*id);
+                Ok(format!("wasm.{name}({})", args.join(", ")))
             }
             Invocation::Adapter(id) => {
                 let adapter = &cx.wit.adapters[id];

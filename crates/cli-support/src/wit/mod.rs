@@ -199,8 +199,7 @@ impl<'a> Context<'a> {
                 let mut function = descriptor.function.clone();
                 function.arguments.insert(0, Descriptor::I32);
                 function.arguments.insert(0, Descriptor::I32);
-                let adapter =
-                    self.table_element_adapter(descriptor.shim_idx, function, descriptor.jspi)?;
+                let adapter = self.table_element_adapter(descriptor.shim_idx, function)?;
                 self.aux.import_map.insert(
                     id,
                     AuxImport::Closure {
@@ -1322,7 +1321,6 @@ impl<'a> Context<'a> {
         &mut self,
         idx: u32,
         mut signature: Function,
-        jspi: bool,
     ) -> Result<AdapterId, Error> {
         fn strip_externref_names(descriptor: &mut Descriptor) {
             match descriptor {
@@ -1359,7 +1357,7 @@ impl<'a> Context<'a> {
         if let Some(&id) = self.table_adapters.get(&signature) {
             return Ok(id);
         }
-        let call = Instruction::CallTableElement { idx, jspi };
+        let call = Instruction::CallTableElement(idx);
         // like above, largely just defer the work elsewhere
         let id = self.register_export_adapter(call, signature.clone())?;
         self.table_adapters.insert(signature, id);

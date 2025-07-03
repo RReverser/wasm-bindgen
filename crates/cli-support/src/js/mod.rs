@@ -3069,7 +3069,7 @@ __wbg_set_wasm(wasm);"
                     }
                 }
                 Instruction::CallExport(_)
-                | Instruction::CallTableElement { .. }
+                | Instruction::CallTableElement(_)
                 | Instruction::CallCore(_) => return Ok(false),
                 _ => {}
             }

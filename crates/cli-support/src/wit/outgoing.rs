@@ -227,9 +227,9 @@ impl InstructionBuilder<'_, '_> {
                 let nargs = descriptor.arguments.len();
                 descriptor.arguments.insert(0, Descriptor::I32);
                 descriptor.arguments.insert(0, Descriptor::I32);
-                let adapter =
-                    self.cx
-                        .table_element_adapter(descriptor.shim_idx, descriptor, false)?;
+                let adapter = self
+                    .cx
+                    .table_element_adapter(descriptor.shim_idx, descriptor)?;
                 self.instruction(
                     &[AdapterType::I32, AdapterType::I32],
                     Instruction::StackClosure {

@@ -7,10 +7,22 @@ use wasm_bindgen::prelude::*;
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen]
-    fn queueMicrotask(closure: &Closure<dyn FnMut(JsValue)>);
+    fn queueMicrotask(closure: &Function);
 
     #[wasm_bindgen(thread_local_v2, js_name = queueMicrotask)]
     static HAS_QUEUE_MICROTASK: Option<Function>;
+
+    #[wasm_bindgen(extends = Promise)]
+    type PromiseExt;
+
+    #[wasm_bindgen(method, js_name = then)]
+    fn then_func(this: &PromiseExt, cb: &Function) -> Function;
+
+    #[wasm_bindgen(thread_local_v2, js_namespace = WebAssembly, js_name = promising)]
+    static WASM_PROMISING: Option<Function>;
+
+    #[wasm_bindgen(thread_local_v2, js_namespace = wasm, js_name = __wbg_futures_tick)]
+    static __WBG_FUTURES_TICK: Function;
 }
 
 struct QueueState {
@@ -49,8 +61,8 @@ impl QueueState {
 
 pub(crate) struct Queue {
     state: Rc<QueueState>,
-    promise_fallback_for_queue_microtask: Option<Promise>,
-    closure: Closure<dyn FnMut(JsValue)>,
+    promise_fallback_for_queue_microtask: Option<PromiseExt>,
+    wbg_futures_tick: Function,
 }
 
 impl Queue {
@@ -61,9 +73,9 @@ impl Queue {
         // fall back to the promise resolution
         if !self.state.is_scheduled.replace(true) {
             if let Some(promise) = self.promise_fallback_for_queue_microtask.as_ref() {
-                let _ = promise.then(&self.closure);
+                let _ = promise.then_func(&self.wbg_futures_tick);
             } else {
-                queueMicrotask(&self.closure);
+                queueMicrotask(&self.wbg_futures_tick);
             }
         }
     }
@@ -86,15 +98,19 @@ impl Queue {
         Self {
             promise_fallback_for_queue_microtask: HAS_QUEUE_MICROTASK.with(|opt| {
                 opt.is_none()
-                    .then(|| Promise::resolve(&JsValue::undefined()))
+                    .then(|| Promise::resolve(&JsValue::undefined()).unchecked_into::<PromiseExt>())
             }),
 
-            closure: {
-                let state = Rc::clone(&state);
-                // This closure will only be called on the next microtask event
-                // tick
-                Closure::wrap_maybe_jspi::<true>(Box::new(move |_| state.run_all()))
-            },
+            wbg_futures_tick: __WBG_FUTURES_TICK.with(|wbg_futures_tick| {
+                WASM_PROMISING.with(|wasm_promising| match wasm_promising {
+                    Some(wasm_promising) => wasm_promising
+                        .call1(&JsValue::undefined(), &wbg_futures_tick)
+                        .unwrap()
+                        .dyn_into()
+                        .expect("WebAssembly.promising should return a Function"),
+                    None => wbg_futures_tick.clone(),
+                })
+            }),
 
             state,
         }
@@ -116,4 +132,9 @@ impl Queue {
 
         f(&QUEUE.0)
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn __wbg_futures_tick() {
+    Queue::with(|queue| queue.state.run_all())
 }
