@@ -59,6 +59,7 @@ macro_rules! shared_api {
         struct ImportFunction<'a> {
             shim: &'a str,
             catch: bool,
+            suspending: bool,
             variadic: bool,
             assert_no_shim: bool,
             method: Option<MethodData<'a>>,

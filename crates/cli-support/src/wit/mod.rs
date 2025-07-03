@@ -599,6 +599,7 @@ impl<'a> Context<'a> {
         let decode::ImportFunction {
             shim,
             catch,
+            suspending,
             variadic,
             method,
             structural,
@@ -675,6 +676,9 @@ impl<'a> Context<'a> {
             if self.aux.exn_store.is_none() {
                 self.find_exn_store();
             }
+        }
+        if *suspending {
+            self.aux.imports_with_suspending.insert(adapter);
         }
         if *assert_no_shim {
             self.aux.imports_with_assert_no_shim.insert(adapter);

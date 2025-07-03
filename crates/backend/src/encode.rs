@@ -340,6 +340,7 @@ fn shared_import_function<'a>(
     Ok(ImportFunction {
         shim: intern.intern(&i.shim),
         catch: i.catch,
+        suspending: i.suspending,
         method,
         assert_no_shim: i.assert_no_shim,
         structural: i.structural,

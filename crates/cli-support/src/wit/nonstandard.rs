@@ -38,6 +38,7 @@ pub struct WasmBindgenAux {
     pub imports_with_catch: HashSet<AdapterId>,
     pub imports_with_variadic: HashSet<AdapterId>,
     pub imports_with_assert_no_shim: HashSet<AdapterId>,
+    pub imports_with_suspending: HashSet<AdapterId>,
 
     /// Auxiliary information to go into JS/TypeScript bindings describing the
     /// exported enums from Rust.

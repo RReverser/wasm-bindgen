@@ -80,7 +80,6 @@ pub struct JsFunction {
     ///
     /// If the function is a setter, that means that the field it sets is optional.
     pub might_be_optional_field: bool,
-    pub catch: bool,
     pub log_error: bool,
 }
 
@@ -313,7 +312,6 @@ impl<'a, 'b> Builder<'a, 'b> {
             ts_ret_ty,
             ts_refs,
             might_be_optional_field,
-            catch: self.catch,
             log_error: self.log_error,
         })
     }

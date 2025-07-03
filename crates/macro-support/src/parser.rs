@@ -197,6 +197,7 @@ macro_rules! attrgen {
             (return_description, true, ReturnDesc(Span, String, Span)),
             (unchecked_param_type, true, ParamType(Span, String, Span)),
             (param_description, true, ParamDesc(Span, String, Span)),
+            (suspending, true, Suspending(Span)),
 
             // For testing purposes only.
             (assert_no_shim, false, AssertNoShim(Span)),
@@ -817,6 +818,7 @@ impl<'a> ConvertToAst<(&ast::Program, BindgenAttrs, &'a Option<ast::ImportModule
             kind,
             js_ret,
             catch,
+            suspending: opts.suspending().is_some(),
             variadic,
             structural: opts.structural().is_some() || opts.r#final().is_none(),
             rust_name: self.sig.ident,

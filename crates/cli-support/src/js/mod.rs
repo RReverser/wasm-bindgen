@@ -2813,9 +2813,14 @@ __wbg_set_wasm(wasm);"
         instrs: &[InstructionData],
         kind: ContextAdapterKind,
     ) -> Result<(), Error> {
-        let catch = self.aux.imports_with_catch.contains(&id);
-        if let ContextAdapterKind::Import(core) = kind {
-            if !catch && self.attempt_direct_import(core, instrs)? {
+        if let ContextAdapterKind::Import {
+            id: core,
+            catch: false,
+            suspending: false,
+            variadic: false,
+        } = kind
+        {
+            if self.attempt_direct_import(core, instrs)? {
                 return Ok(());
             }
         }
@@ -2825,9 +2830,12 @@ __wbg_set_wasm(wasm);"
         let mut builder = binding::Builder::new(self);
         builder.log_error(match kind {
             ContextAdapterKind::Export(_) | ContextAdapterKind::Adapter => false,
-            ContextAdapterKind::Import(_) => builder.cx.config.debug,
+            ContextAdapterKind::Import { .. } => builder.cx.config.debug,
         });
-        builder.catch(catch);
+        builder.catch(matches!(
+            kind,
+            ContextAdapterKind::Import { catch: true, .. }
+        ));
         let mut args = &None;
         let mut asyncness = false;
         let mut variadic = false;
@@ -2852,13 +2860,13 @@ __wbg_set_wasm(wasm);"
                     },
                 }
             }
-            ContextAdapterKind::Import(_) => {}
+            ContextAdapterKind::Import { .. } => {}
             ContextAdapterKind::Adapter => {}
         }
 
         // an internal debug name to help with error messages
         let debug_name = match kind {
-            ContextAdapterKind::Import(i) => {
+            ContextAdapterKind::Import { id: i, .. } => {
                 let i = builder.cx.module.imports.get(i);
                 format!("import of `{}::{}`", i.module, i.name)
             }
@@ -2876,7 +2884,6 @@ __wbg_set_wasm(wasm);"
             ts_doc,
             code,
             might_be_optional_field,
-            catch,
             log_error,
         } = builder
             .process(
@@ -2898,7 +2905,6 @@ __wbg_set_wasm(wasm);"
         // on what's being exported.
         match kind {
             ContextAdapterKind::Export(export) => {
-                assert!(!catch);
                 assert!(!log_error);
 
                 let ts_sig = export.generate_typescript.then_some(ts_sig.as_str());
@@ -3001,8 +3007,13 @@ __wbg_set_wasm(wasm);"
                     }
                 }
             }
-            ContextAdapterKind::Import(core) => {
-                let code = if catch {
+            ContextAdapterKind::Import {
+                id: core,
+                catch,
+                suspending,
+                variadic: _,
+            } => {
+                let mut code = if catch {
                     format!(
                         "function() {{ return handleError(function {}, arguments) }}",
                         code
@@ -3016,10 +3027,13 @@ __wbg_set_wasm(wasm);"
                     format!("function{}", code)
                 };
 
+                if suspending {
+                    code = format!("new WebAssembly.Suspending({})", code)
+                }
+
                 self.wasm_import_definitions.insert(core, code);
             }
             ContextAdapterKind::Adapter => {
-                assert!(!catch);
                 assert!(!log_error);
 
                 self.globals.push_str("function ");
@@ -4386,7 +4400,12 @@ enum ContextAdapterKind<'a> {
     /// An exported function, method, constrctor, or getter/setter.
     Export(&'a AuxExport),
     /// An imported function or intrinsic.
-    Import(walrus::ImportId),
+    Import {
+        id: walrus::ImportId,
+        catch: bool,
+        suspending: bool,
+        variadic: bool,
+    },
     Adapter,
 }
 impl<'a> ContextAdapterKind<'a> {
@@ -4396,7 +4415,12 @@ impl<'a> ContextAdapterKind<'a> {
             None => {
                 let core = wit.implements.iter().find(|pair| pair.2 == id);
                 match core {
-                    Some((core, _, _)) => ContextAdapterKind::Import(*core),
+                    Some((core, _, _)) => ContextAdapterKind::Import {
+                        id: *core,
+                        catch: aux.imports_with_catch.contains(&id),
+                        suspending: aux.imports_with_suspending.contains(&id),
+                        variadic: aux.imports_with_variadic.contains(&id),
+                    },
                     None => ContextAdapterKind::Adapter,
                 }
             }
@@ -4431,14 +4455,17 @@ fn iter_adapeter<'a>(
     adapters.sort_by(|(_, _, a), (_, _, b)| {
         fn get_kind_order(kind: &ContextAdapterKind) -> u8 {
             match kind {
-                ContextAdapterKind::Import(_) => 0,
+                ContextAdapterKind::Import { .. } => 0,
                 ContextAdapterKind::Export(_) => 1,
                 ContextAdapterKind::Adapter => 2,
             }
         }
 
         match (a, b) {
-            (ContextAdapterKind::Import(a), ContextAdapterKind::Import(b)) => {
+            (
+                ContextAdapterKind::Import { id: a, .. },
+                ContextAdapterKind::Import { id: b, .. },
+            ) => {
                 let a = module.imports.get(*a);
                 let b = module.imports.get(*b);
                 a.name.cmp(&b.name)

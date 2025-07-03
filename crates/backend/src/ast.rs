@@ -183,6 +183,8 @@ pub struct ImportFunction {
     pub js_ret: Option<syn::Type>,
     /// Whether to catch JS exceptions
     pub catch: bool,
+    /// Whether this function returns a Promise and needs to be suspended by JSPI before returning to Wasm
+    pub suspending: bool,
     /// Whether the function is variadic on the JS side
     pub variadic: bool,
     /// Whether the function should use structural type checking
